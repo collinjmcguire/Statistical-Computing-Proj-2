@@ -1,5 +1,5 @@
 ---
-title: "Project 2"
+title: "Statistical Computing Project 2"
 author: "Collin McGuire"
 date: "9/30/2021"
 output: html_document
@@ -9,14 +9,21 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+#### Part 1
+The goal of this section is to practice creating functions.
+First, load the tidyverse and tidytuesdayR packages.
+
 ```{r Part 1 - Loading Necessary Packages}
 library(tidyverse)
 library(tidytuesdayR)
 ```
 
+##### Part 1A - Exponential Transformation
+This section creates a function that can perform exponential transformation when given a number and integer as inputs
+
 ```{r Part 1A - Exponential Transformation}
-## Think this works now, what a diff sleep makes
-Exp <- function(x, k){
+## If statements account for k values of 1 and 2
+Exp <- function(x, k){ 
   if(k == 1) {
    result <- 1 + x
   } else if(k == 2) {
@@ -30,31 +37,20 @@ Exp <- function(x, k){
       expon_tot <- sum(output3)
       result <- 1 + x + expon_tot
   }
-  print(result)
+  return(result)
 }
-
-Exp(1, 4)
-```
-```{r Test code}
-sample_sd(testy)
-sd(testy)
-alpha = 1 - 0.95
-dof <- 10-1
-t_score = qt(p=alpha/2, df = dof, lower.tail = FALSE)
-upper <- (t_score*sd(testy) + mean(testy))
-lower <- (t_score*sd(testy) - mean(testy))
-  answer <- c(lower, upper)
 ```
 
-
+##### Part 1B - Sample Mean and Sample Standard Deviation
+This part contains two functions, which calculate a sample mean and sample standard deviation for a vector, x, of unknown length
 
 ```{r Part 1B - Sample Mean and Std Dev}
 
 sample_mean <- function(x) {
   arith_mean <- sum(x)/length(x)
+  return(arith_mean)
 }
-testy <- rbinom(10, 5, 0.5)
-sample_mean(testy)
+
   
 sample_sd <- function(x) {
   l <- length(x)
@@ -64,10 +60,12 @@ sample_sd <- function(x) {
   sum_dif <- sum(sq_dif)
   under_sqrt <- sum_dif/(l-1)
   sd_result <- sqrt(under_sqrt)
+  return(sd_result)
 }
-sample_sd(testy)
 ```
 
+##### Part 1C - Confidence Intervals
+This part contains a function, calculate_CI, that calculates the CI of a vector of length N, and has a variable confidence interval component.
 
 ```{r Part 1C - Confidence Intervals}
 calculate_CI <- function(x, conf) {
@@ -93,12 +91,14 @@ calculate_CI <- function(x, conf) {
   answer <- c(lower, upper)
   return(answer)
 }
-calculate_CI(testy, conf = 0.95)
-
 ```
 
+#### Part 2 - Wrangling Data
+In this section of the assignment, I wrangle temperature and rainfall data from Australia.
 
-```{r Part 2 - Wrangling Data Part 1}
+First, load in necessary libraries. Then, download and save the datafiles if they don't already exist. Next, load the datafiles and save them as the rainfall and temperature dataframe. I then used dyplyr functions to drop missing values, capitalize the city_name column, create a date column, drop the original date column and add a year column to the rainfall dataset. Finally, I mergeed this dataset with the temperature dataset after matching on city name and date.
+
+```{r Part 2 - Wrangling Data}
 library(here)
 library(lubridate)
 library(stringr)
@@ -126,38 +126,60 @@ merged <- rainfall %>%
   inner_join(temperature, by = c("city_name", "date"))
 ```
 
-```{r Part 3: Data Visualization}
+#### Part 3: Data Visualization
+
+In this section, I plot the wrangled data using ggplot2.
+
+##### Part 3A: Plotting Temperature Data over Time
+
+First, I created a dataframe that only includes years after 2014 with filter. Then, I created a line plot of max and min temperature over time for all five different cities in the dataset. I displayed all five cities at the same time using the facet_wrap feature.
+
+```{r Part 3A: Plotting temperature data over time, fig.width = 12, fig.height= 8}
 library(ggplot2)
 twentyfourteen <- merged %>%
   filter(year >= 2014)
-
-```
-
-```{r Part 3A: Plotting temperature data over time, fig.width = 12, fig.height= 8}
 base3A <- ggplot(twentyfourteen, aes(x = date, y = temperature, color = temp_type))
-base3A + geom_line() +
-  facet_wrap(city_name ~ ., scales = "free", ncol = 1)
-
+final3A <- base3A + geom_line(lwd = 1) +
+  facet_wrap(city_name ~ ., ncol = 1) + 
+  labs(title = "Maximum and Minimum Temperature Over Time for 5 Australian Cities", subtitle = "The maximum and minimum temperature recorded in each city starting in 2014 and continuing until 2019. Perth and Melbourne have the fewest datapoints,\nwhile Sydney and Canberra have the most. All cties show expected seasonal variation, with the greatest variation seen in Canberra.", caption = "Collin McGuire, Statistical Programming Assignment 2", x = "Time", y = "Max Temperature (°C)", color = "") +
+  scale_color_manual(labels = c("Max", "Min"), values = c("sienna3", "navy")) +
+  theme(axis.line = element_line(color = "black"), panel.background = element_rect(fill = "ghostwhite"), 
+        plot.background = element_rect(fill = "linen"), strip.background = element_rect(fill ="pink1"),
+        strip.text = element_text(face = "bold"), panel.grid = element_blank())
+final3A
 ```
 
+##### Part 3B: Plotting Rainfall Over Time
+In this section, I explore the distribution of rainfall for a given city and year in the log scale. To do this, I created a histogram plot function that first evaluates the inputs to ensure they exist in the dataframe, and then plots a histogram of that city and year, log transformed. An example is provided below.
 
-```{r Part 3B: Plotting rainfall over time}
+When designing my function, first I added a if(stop) statement to ensure that only valid entries in the dataset would be pulled. This prevents the function from generating a blank graph. Next, I filtered the dataframe to ensure only the queried date and city were displayed. I then used the ggplot function to create a histogram, choosing 15 bins rather than 30 to improve readability of the figure.
+
+```{r Part 3B: Plotting rainfall over time, fig.width=12, fig.height=8}
 histogram_plot <- function(df, x, y) {
   if((! (x %in% df$city_name)) | (! (y %in% df$year))) {
-    stop("This input does not exist in the dataset")
+    stop("This input does not exist in the dataset. X should be a string city name, while Y is a numeric year.")
   }
   
   histogram <- df %>% 
     filter(city_name == x, year == y) %>%
     ggplot(aes(x = log(rainfall))) +
-    geom_histogram() 
+    geom_histogram(bins = 15, color = "black", fill = "slategray2") +
+    ggtitle(paste("Log of Rainfall for:", x, y, sep = " ")) +
+    labs(x = "log(Rainfall) by Day (mm)", y = "Number of Days") +
+    theme(plot.background = element_rect(fill = "grey87"), panel.background = element_rect(fill = "ghostwhite") )
   
   print(histogram)
 }
 
-histogram_plot(merged, "PERTH", 2016)
+histogram_plot(merged, "PERTH", 2014)
 
 ```
+
+#### Part 4: Apply Functions and Plot
+This section focused on applying functions from Part 1 to the wrangled data from Part 2. 
+
+##### Part4A: Tasks
+First, I filtered to only years after 2013, and then calculated the sample mean/sd and confidence interval using my earlier functions. This produced a new dataframe, which is used in Part 4B
 
 ```{r Part 4A: Tasks}
 rain_df <- merged %>%
@@ -170,14 +192,19 @@ rain_df <- merged %>%
 
 ```
 
+##### Part4B: Tasks
+In this section, I created a graph of average rainfall from the dataframe generated in the prior section. I included both yearly average, as well as the 95% confidence intervals.
 
-```{r Part 4B: Tasks}
+```{r Part 4B: Tasks, fig.width = 12, fig.height= 8}
 part4 <- rain_df %>% 
   ggplot(aes(x = year, average_rainfall))+ 
-  geom_line() +
+  geom_line(lwd = 1.5, color = "lightcoral") +
   geom_point() +
   geom_errorbar(aes(ymin = rain_df$lower_bound, ymax = rain_df$upper_bound)) +
-  facet_wrap(city_name ~ .)
+  facet_wrap(city_name ~ .) +
+  labs(title = "Yearly Average Rainfall by City", subtitle = "Yearly rainfall data for five Australian cities including the 95% confidence interval. Perth has the highest annual rainfall, while Canberra has the least. Data stopped being\ncollected mid-2019, accounting for the drop off.", caption = "Collin McGuire, Statistical Programming Assignment 2", x = "Year", y = "Average Rainfall") +
+  theme(axis.title = element_text(face = "bold"), plot.background = element_rect(fill = "linen", color = "black"), 
+        panel.background = element_rect(fill = "azure"), panel.grid.major = element_line(color = "grey90"))
 
 part4
 
