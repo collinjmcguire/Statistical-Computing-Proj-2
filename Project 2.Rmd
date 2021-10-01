@@ -84,6 +84,43 @@ if(!file.exists(here("data","tuesdata_rainfall.RDS"))){
 
 rainfall <- readRDS(here("data","tuesdata_rainfall.RDS"))
 temperature <- readRDS(here("data","tuesdata_temperature.RDS"))
+
+drop_na(rainfall) ## Remove any rows with missing data
+
+library(lubridate)
+library(stringr)
+concat_year <- paste(rainfall$year, rainfall$month, rainfall$day, sep="-")
+ymd_year <- ymd(concat_year, quiet = FALSE, tz = NULL)
+year_only <- year(ymd_year)
+rainfall <- mutate(rainfall, date = ymd_year)
+rainfall <- mutate(rainfall, year_only = year_only)
+uppercase <- str_to_upper(rainfall$city_name)
+rainfall <- mutate(rainfall, city_name = uppercase)
+merged_set <- inner_join(x = rainfall, y = temperature, by = c("city_name", "date")) ## This merge is bad currently
+
+```
+
+```{r Part 3: Data Visualization}
+library(ggplot2)
+twentyfourteen <- merged_set %>%
+  filter(year_only >= 2014)
+minmax <- twentyfourteen %>%
+  group_by(city_name, year_only) %>%
+    summarise(max_temp = max(merged_set$temperature, na.rm = TRUE), min_temp = min(merged_set$temperature, na.rm = TRUE), .groups = "keep")
+
+```
+
+```{r Part 3A: Plotting temperature data over time}
+base3A <- ggplot(merged_set, aes(x = year_only, y = temperature))
+base3A + geom_line()
+
+
 ```
 
 
+```{r Part 3B: Plotting rainfall over time}
+
+
+
+
+```
