@@ -22,20 +22,28 @@ Exp <- function(x, k){
   } else if(k == 2) {
       result <- 1 + x + (x^k)/factorial(k)
   } else{
-      output3 <- vector("double", length=(k-2))
-      for(i in 3:k) {
-        output3 <- c((x^i)/factorial(i))
+      l = (k-1)
+      output3 <- vector("double", length= l)
+      for(i in 2:k) {
+        output3[[i]] <- (x^i)/factorial(i)
       }
-      vecsum <- sum(output3)
-   result <- 1 + x + vecsum
+      expon_tot <- sum(output3)
+      result <- 1 + x + expon_tot
   }
   print(result)
 }
 
-Exp(2, 5)
-
-
+Exp(8, 7)
 ```
+```{r Test code}
+testoutput <- vector("double", length = 4)
+for(i in 2:5) {
+  testoutput[[i]] <- (3^i)/factorial(i)
+}
+print(testoutput)
+```
+
+
 
 ```{r Part 1B - Sample Mean and Std Dev}
 
