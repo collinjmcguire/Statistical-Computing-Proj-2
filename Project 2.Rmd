@@ -71,15 +71,27 @@ sample_sd(testy)
 
 ```{r Part 1C - Confidence Intervals}
 calculate_CI <- function(x, conf) {
+  
+  if(conf >= 1) {
+    stop("Confidence interval values must be <1 and >0. For a 95% CI, use 0.95")
+    
+  } else if(conf <= 0) {
+    stop("Confidence interval values must be <1 and >0. For a 95% CI, use 0.95")
+    
+  }
+  
+  
   alpha = 1 - conf
+  N <- length(x)
   dof <- length(x)-1
   t_score = qt(p=alpha/2, df = dof, lower.tail = FALSE)
-  calc_mean <- sample_mean(x)
-  samp_sd <- sample_sd(x)
-  upper <- ((t_score*samp_sd) + calc_mean)
-  lower <- ((t_score*samp_sd) - calc_mean)
+  std_error <- sample_sd(x)/sqrt(N)
+  
+  lower <- sample_mean(x) - t_score*std_error
+  upper <- sample_mean(x) + t_score*std_error
+  
   answer <- c(lower, upper)
-  print(answer)
+  return(answer)
 }
 calculate_CI(testy, conf = 0.95)
 
@@ -121,7 +133,7 @@ twentyfourteen <- merged %>%
 
 ```
 
-```{r Part 3A: Plotting temperature data over time}
+```{r Part 3A: Plotting temperature data over time, fig.width = 12, fig.height= 8}
 base3A <- ggplot(twentyfourteen, aes(x = date, y = temperature, color = temp_type))
 base3A + geom_line() +
   facet_wrap(city_name ~ ., scales = "free", ncol = 1)
@@ -148,3 +160,26 @@ histogram_plot(merged, "PERTH", 2016)
 ```
 
 ```{r Part 4A: Tasks}
+rain_df <- merged %>%
+  filter(year >= 2014) %>%
+  group_by(city_name, year) %>%
+  summarize(average_rainfall = sample_mean(rainfall),
+            Std_Dev_rainfall = sample_sd(rainfall),
+            lower_bound = calculate_CI(rainfall, conf = 0.95)[1],
+            upper_bound = calculate_CI(rainfall, conf = 0.95)[2], .groups = "keep")
+
+```
+
+
+```{r Part 4B: Tasks}
+part4 <- rain_df %>% 
+  ggplot(aes(x = year, average_rainfall))+ 
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = rain_df$lower_bound, ymax = rain_df$upper_bound)) +
+  facet_wrap(city_name ~ .)
+
+part4
+
+```
+
