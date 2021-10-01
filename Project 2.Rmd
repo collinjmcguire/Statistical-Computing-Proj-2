@@ -15,7 +15,7 @@ library(tidytuesdayR)
 ```
 
 ```{r Part 1A - Exponential Transformation}
-## LMAO WTFn
+## Think this works now, what a diff sleep makes
 Exp <- function(x, k){
   if(k == 1) {
    result <- 1 + x
@@ -33,14 +33,17 @@ Exp <- function(x, k){
   print(result)
 }
 
-Exp(8, 7)
+Exp(1, 4)
 ```
 ```{r Test code}
-testoutput <- vector("double", length = 4)
-for(i in 2:5) {
-  testoutput[[i]] <- (3^i)/factorial(i)
-}
-print(testoutput)
+sample_sd(testy)
+sd(testy)
+alpha = 1 - 0.95
+dof <- 10-1
+t_score = qt(p=alpha/2, df = dof, lower.tail = FALSE)
+upper <- (t_score*sd(testy) + mean(testy))
+lower <- (t_score*sd(testy) - mean(testy))
+  answer <- c(lower, upper)
 ```
 
 
@@ -50,17 +53,19 @@ print(testoutput)
 sample_mean <- function(x) {
   arith_mean <- sum(x)/length(x)
 }
-  
+testy <- rbinom(10, 5, 0.5)
+sample_mean(testy)
   
 sample_sd <- function(x) {
   l <- length(x)
   m <- sum(x)/l
-  for(i in 1:l) {
-    sum_of_dif <- c((i-m)^2)
-  }
-  stddev <- sum_of_dif/(l-1)
+  dif <- x-m
+  sq_dif <- dif^2
+  sum_dif <- sum(sq_dif)
+  under_sqrt <- sum_dif/(l-1)
+  sd_result <- sqrt(under_sqrt)
 }
-
+sample_sd(testy)
 ```
 
 
@@ -69,17 +74,22 @@ calculate_CI <- function(x, conf) {
   alpha = 1 - conf
   dof <- length(x)-1
   t_score = qt(p=alpha/2, df = dof, lower.tail = FALSE)
-  upper <- sample_mean(x) + (t_score*sample_sd(x))
-  lower <- sample_mean(x) - (t_score*sample_sd(x))
-  answer <- c(upper, lower)
+  calc_mean <- sample_mean(x)
+  samp_sd <- sample_sd(x)
+  upper <- ((t_score*samp_sd) + calc_mean)
+  lower <- ((t_score*samp_sd) - calc_mean)
+  answer <- c(lower, upper)
+  print(answer)
 }
-
+calculate_CI(testy, conf = 0.95)
 
 ```
 
 
 ```{r Part 2 - Wrangling Data Part 1}
 library(here)
+library(lubridate)
+library(stringr)
 if(!file.exists(here("data","tuesdata_rainfall.RDS"))){
   tuesdata <- tidytuesdayR::tt_load('2020-01-07')
   rainfall <- tuesdata$rainfall
@@ -93,42 +103,48 @@ if(!file.exists(here("data","tuesdata_rainfall.RDS"))){
 rainfall <- readRDS(here("data","tuesdata_rainfall.RDS"))
 temperature <- readRDS(here("data","tuesdata_temperature.RDS"))
 
-drop_na(rainfall) ## Remove any rows with missing data
-
-library(lubridate)
-library(stringr)
-concat_year <- paste(rainfall$year, rainfall$month, rainfall$day, sep="-")
-ymd_year <- ymd(concat_year, quiet = FALSE, tz = NULL)
-year_only <- year(ymd_year)
-rainfall <- mutate(rainfall, date = ymd_year)
-rainfall <- mutate(rainfall, year_only = year_only)
-uppercase <- str_to_upper(rainfall$city_name)
-rainfall <- mutate(rainfall, city_name = uppercase)
-merged_set <- inner_join(x = rainfall, y = temperature, by = c("city_name", "date")) ## This merge is bad currently
-
+rainfall <- rainfall %>%
+  drop_na() %>%
+  mutate(date = make_date(year, month, day)) %>%
+  mutate(city_name = toupper(city_name)) %>%
+  select(-3, -4, -5)
+year <- year(ymd(rainfall$date))
+merged <- rainfall %>%
+  mutate(year = year) %>%
+  inner_join(temperature, by = c("city_name", "date"))
 ```
 
 ```{r Part 3: Data Visualization}
 library(ggplot2)
-twentyfourteen <- merged_set %>%
-  filter(year_only >= 2014)
-minmax <- twentyfourteen %>%
-  group_by(city_name, year_only) %>%
-    summarise(max_temp = max(merged_set$temperature, na.rm = TRUE), min_temp = min(merged_set$temperature, na.rm = TRUE), .groups = "keep")
+twentyfourteen <- merged %>%
+  filter(year >= 2014)
 
 ```
 
 ```{r Part 3A: Plotting temperature data over time}
-base3A <- ggplot(merged_set, aes(x = year_only, y = temperature))
-base3A + geom_line()
-
+base3A <- ggplot(twentyfourteen, aes(x = date, y = temperature, color = temp_type))
+base3A + geom_line() +
+  facet_wrap(city_name ~ ., scales = "free", ncol = 1)
 
 ```
 
 
 ```{r Part 3B: Plotting rainfall over time}
+histogram_plot <- function(df, x, y) {
+  if((! (x %in% df$city_name)) | (! (y %in% df$year))) {
+    stop("This input does not exist in the dataset")
+  }
+  
+  histogram <- df %>% 
+    filter(city_name == x, year == y) %>%
+    ggplot(aes(x = log(rainfall))) +
+    geom_histogram() 
+  
+  print(histogram)
+}
 
-
-
+histogram_plot(merged, "PERTH", 2016)
 
 ```
+
+```{r Part 4A: Tasks}
